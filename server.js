@@ -80,7 +80,41 @@ app.post('/register', async (req, res) => {
             }
         }
 
-        // 4. Format participant names and IDs for Excel mapping
+        // 4. Fetch all existing registrations for this sport to check player-level duplication
+        const { data: existingRegs, error: fetchError } = await supabase
+            .from('registrations')
+            .select('participants')
+            .ilike('sport', sportName);
+
+        if (fetchError) throw fetchError;
+
+        // Check if any incoming player ID/Name is already registered in another team for this sport
+        if (existingRegs && existingRegs.length > 0) {
+            for (let member of membersArray) {
+                const memberId = (member.student_id || '').trim();
+                const memberName = (member.name || '').trim().toLowerCase();
+
+                for (let reg of existingRegs) {
+                    const storedParticipants = (reg.participants || '').toLowerCase();
+                    
+                    // Match by Student ID if present, or by Name if ID is missing
+                    if (memberId && storedParticipants.includes(memberId.toLowerCase())) {
+                        return res.status(400).json({ 
+                            success: false, 
+                            error: `Registration Error: Student ID '${memberId}' (${member.name}) is already registered in another team for '${sportName}'. A player cannot play in two different teams.` 
+                        });
+                    }
+                    if (!memberId && memberName && storedParticipants.includes(memberName)) {
+                        return res.status(400).json({ 
+                            success: false, 
+                            error: `Registration Error: Player '${member.name}' is already registered in another team for '${sportName}'.` 
+                        });
+                    }
+                }
+            }
+        }
+
+        // 5. Format participant names and IDs for Excel mapping
         let participantValue = 'Unknown Player';
         if (membersArray.length > 0) {
             participantValue = membersArray
@@ -91,7 +125,7 @@ app.post('/register', async (req, res) => {
             participantValue = req.body.participants || 'Unknown Player';
         }
 
-        // 5. Generate Sport Prefix for Serial Reg Code (e.g. BC01, VB02, KB03)
+        // 6. Generate Sport Prefix for Serial Reg Code (e.g. BC01, VB02, KB03)
         let prefix = 'GEN';
         if (lowerSport.includes('box cricket')) prefix = 'BC';
         else if (lowerSport.includes('volleyball')) prefix = 'VB';
@@ -107,28 +141,6 @@ app.post('/register', async (req, res) => {
         if (countError) throw countError;
         const nextSerial = (count || 0) + 1;
         const regCodeValue = `${prefix}${String(nextSerial).padStart(2, '0')}`;
-
-        // 6. STRICT CHECK: Same identifier cannot register twice in the SAME sport
-        const { data: allSportRegs } = await supabase
-            .from('registrations')
-            .select('participants')
-            .ilike('sport', sportName);
-
-        let alreadyExists = false;
-        if (allSportRegs) {
-            allSportRegs.forEach(reg => {
-                if (reg.participants && reg.participants.includes(captainInput)) {
-                    alreadyExists = true;
-                }
-            });
-        }
-
-        if (alreadyExists) {
-            return res.status(400).json({ 
-                success: false, 
-                error: `Registration Error: This ID/Phone number is already registered for '${sportName}'. You cannot register twice for the same game.` 
-            });
-        }
 
         // 7. Insert into Supabase
         const { data, error } = await supabase
