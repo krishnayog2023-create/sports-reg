@@ -15,33 +15,36 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Register Endpoint
-app.post('/api/register', async (req, res) => {
+// Apne registration POST route ke andar ye logic use karo:
+app.post('/register', async (req, res) => {
   try {
-    console.log("Form data received:", req.body); // Terminal mein check karne ke liye
-    
-    const { sport, category, fullName, name, participantName, participants, primaryCode, gender } = req.body;
-    
-    // Frontend se jo bhi sahi naam aaye, use pakad lo
-    const playerName = fullName || participantName || name || (typeof participants === 'string' ? participants : null) || "Unknown Player";
-    const reg_code = 'NKT-' + Math.floor(100000 + Math.random() * 900000);
+    // Frontend form se aane wale alag-alag field names ko check karega
+    const participantValue = 
+      req.body.participants || 
+      req.body.participantName || 
+      req.body.name || 
+      req.body.fullName || 
+      'Unknown Player';
 
     const { data, error } = await supabase
       .from('registrations')
-      .insert([{ 
-        reg_code, 
-        sport, 
-        category, 
-        participants: playerName 
-      }]);
+      .insert([
+        {
+          category: req.body.category || 'Individual',
+          sport: req.body.sport || '',
+          participants: participantValue, // Ab yahan sahi name/data save hoga
+          // Baaki fields jo aapke form mein hain, unhe yahan map kar lein
+        }
+      ]);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase Error:', error);
+      return res.status(400).json({ success: false, error: error.message });
+    }
 
-    res.status(200).json({ success: true, reg_code });
+    res.status(200).json({ success: true, data });
   } catch (err) {
-    console.error("Database error:", err.message);
+    console.error('Server Error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
-});
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
 });
