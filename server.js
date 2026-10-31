@@ -5,6 +5,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const port = process.env.PORT || 10000;
 
+// Initialize Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -13,7 +14,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. Register Endpoint (Matches your form posting to /register)
+// 1. Register Endpoint with 100% Unique Reg Code Generation
 app.post('/register', async (req, res) => {
     try {
         let participantValue = 'Unknown Player';
@@ -31,12 +32,27 @@ app.post('/register', async (req, res) => {
                 'Unknown Player';
         }
 
+        // Extract incoming reg_code or primary_code
         let regCodeValue = req.body.reg_code || req.body.primary_code;
         if (!regCodeValue && req.body.members && Array.isArray(req.body.members) && req.body.members.length > 0) {
             regCodeValue = req.body.members[0].primary_code || req.body.members[0].reg_code;
         }
-        if (!regCodeValue) {
-            regCodeValue = 'REG-' + Math.floor(100000 + Math.random() * 900000);
+
+        // Ensure reg_code is completely unique using timestamp + random suffix to avoid duplicate key errors
+        if (!regCodeValue || String(regCodeValue).trim() === '' || regCodeValue === 'undefined' || regCodeValue === 'null') {
+            regCodeValue = 'REG-' + Date.now() + '-' + Math.floor(100 + Math.random() * 900);
+        } else {
+            // Check if this reg_code already exists in Supabase
+            const { data: existing } = await supabase
+                .from('registrations')
+                .select('reg_code')
+                .eq('reg_code', regCodeValue)
+                .maybeSingle();
+
+            if (existing) {
+                // Append timestamp to make it unique if collision occurs
+                regCodeValue = `${regCodeValue}-${Date.now().toString().slice(-4)}`;
+            }
         }
 
         const { data, error } = await supabase
@@ -114,15 +130,3 @@ app.put('/api/registrations/:reg_code', async (req, res) => {
 app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port}`);
 });
-
-
-
-
-
-
-
-
-
-
-
-
