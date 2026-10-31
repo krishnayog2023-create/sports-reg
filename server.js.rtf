@@ -1,0 +1,139 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 const express = require('express');\
+const path = require('path');\
+const cors = require('cors');\
+const db = require('./db');\
+\
+const app = express();\
+const PORT = process.env.PORT || 3000;\
+\
+app.use(cors());\
+app.use(express.json());\
+app.use(express.urlencoded(\{ extended: true \}));\
+app.use(express.static(path.join(__dirname, 'public')));\
+\
+const sportPrefixes = \{\
+  'Box Cricket': 'BC',\
+  'Table Tennis': 'TT',\
+  'Carrom': 'CRM',\
+  'Volleyball': 'VB',\
+  'Kabaddi': 'KBD'\
+\};\
+\
+function generateRegCode(sport, participantType, staffType, callback) \{\
+  const prefix = sportPrefixes[sport] || 'REG';\
+  \
+  if (participantType === 'Staff') \{\
+    const staffSub = staffType === 'Teaching' ? 'TS' : 'NST';\
+    const pattern = `$\{prefix\}$\{staffSub\}%`;\
+    db.get(\
+      `SELECT reg_code FROM registrations WHERE sport = ? AND reg_code LIKE ? ORDER BY id DESC LIMIT 1`,\
+      [sport, pattern],\
+      (err, row) => \{\
+        let nextNum = 1;\
+        if (row && row.reg_code) \{\
+          const numPart = parseInt(row.reg_code.replace(`$\{prefix\}$\{staffSub\}`, ''), 10);\
+          if (!isNaN(numPart)) nextNum = numPart + 1;\
+        \}\
+        const formattedNum = String(nextNum).padStart(2, '0');\
+        callback(`$\{prefix\}$\{staffSub\}$\{formattedNum\}`);\
+      \}\
+    );\
+  \} else \{\
+    const randomNum = Math.floor(100 + Math.random() * 900);\
+    callback(`$\{prefix\}$\{randomNum\}`);\
+  \}\
+\}\
+\
+app.post('/api/register', (req, res) => \{\
+  const \{ sport, category, team_name, participant_type, staff_type, members \} = req.body;\
+\
+  if (!sport || !category || !members || !Array.isArray(members) || members.length === 0) \{\
+    return res.status(400).json(\{ error: 'Invalid submission payload.' \});\
+  \}\
+\
+  for (const m of members) \{\
+    if (!m.primary_code || !/^\\d\{5\}$/.test(m.primary_code)) \{\
+      return res.status(400).json(\{ \
+        error: `Invalid Primary Code "$\{m.primary_code\}". Primary Code must be exactly 5 digits.` \
+      \});\
+    \}\
+  \}\
+\
+  if (category === 'Team') \{\
+    if (sport === 'Box Cricket') \{\
+      if (members.length !== 10) \{\
+        return res.status(400).json(\{ error: 'Box Cricket team must have exactly 10 players.' \});\
+      \}\
+      const girlsCount = members.filter(m => m.gender === 'Girl').length;\
+      const boysCount = members.filter(m => m.gender === 'Boy').length;\
+      if (boysCount !== 7 || girlsCount !== 3) \{\
+        return res.status(400).json(\{ error: 'Box Cricket composition violation: Must include 7 boys and 3 girls total.' \});\
+      \}\
+    \} else if (sport === 'Volleyball') \{\
+      if (members.length !== 8) \{\
+        return res.status(400).json(\{ error: 'Volleyball team must have exactly 8 players.' \});\
+      \}\
+      const girlsCount = members.filter(m => m.gender === 'Girl').length;\
+      const boysCount = members.filter(m => m.gender === 'Boy').length;\
+      if (boysCount !== 5 || girlsCount !== 3) \{\
+        return res.status(400).json(\{ error: 'Volleyball composition violation: Must include 5 boys and 3 girls total.' \});\
+      \}\
+    \}\
+  \}\
+\
+  generateRegCode(sport, participant_type, staff_type, (regCode) => \{\
+    db.serialize(() => \{\
+      db.run('BEGIN TRANSACTION');\
+\
+      const insertRegQuery = `INSERT INTO registrations (reg_code, sport, category, team_name) VALUES (?, ?, ?, ?)`;\
+      db.run(insertRegQuery, [regCode, sport, category, team_name || ''], function(err) \{\
+        if (err) \{\
+          db.run('ROLLBACK');\
+          return res.status(500).json(\{ error: 'Database error during registration creation.' \});\
+        \}\
+\
+        const registrationId = this.lastID;\
+        let queryError = null;\
+        let completed = 0;\
+\
+        members.forEach(m => \{\
+          const insertPartQuery = `\
+            INSERT INTO participants (registration_id, primary_code, participant_type, name, gender, sport)\
+            VALUES (?, ?, ?, ?, ?, ?)\
+          `;\
+          db.run(insertPartQuery, [registrationId, m.primary_code, participant_type, m.name, m.gender, sport], (pErr) => \{\
+            if (pErr) \{\
+              if (pErr.message.includes('UNIQUE constraint failed')) \{\
+                queryError = `Primary Code "$\{m.primary_code\}" is already registered for $\{sport\}. Each participant can register for a given game only once.`;\
+              \} else \{\
+                queryError = pErr.message;\
+              \}\
+            \}\
+            completed++;\
+\
+            if (completed === members.length) \{\
+              if (queryError) \{\
+                db.run('ROLLBACK');\
+                return res.status(400).json(\{ error: queryError \});\
+              \} else \{\
+                db.run('COMMIT');\
+                return res.json(\{ success: true, reg_code: regCode, message: 'Registration successful!' \});\
+              \}\
+            \}\
+          \});\
+        \});\
+      \});\
+    \});\
+  \});\
+\});\
+\
+app.listen(PORT, () => \{\
+  console.log(`Server running at http://localhost:$\{PORT\}`);\
+\});}

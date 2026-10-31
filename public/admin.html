@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Sports Registration</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f7f6; }
+        h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        button { padding: 6px 12px; margin-right: 5px; cursor: pointer; border: none; border-radius: 4px; }
+        .btn-edit { background-color: #ffc107; color: black; }
+        .btn-delete { background-color: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+
+    <h2>Admin Dashboard - Registrations</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Reg Code</th>
+                <th>Sport</th>
+                <th>Category</th>
+                <th>Participants</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Data will load here dynamically -->
+        </tbody>
+    </table>
+
+    <script>
+        async function fetchRegistrations() {
+            try {
+                const response = await fetch('/api/registrations');
+                const data = await response.json();
+                const tableBody = document.getElementById('tableBody');
+                tableBody.innerHTML = '';
+
+                data.forEach(item => {
+                    let participantsNames = '';
+                    try {
+                        const pList = typeof item.participants === 'string' ? JSON.parse(item.participants) : item.participants;
+                        participantsNames = pList.map(p => p.name).join(', ');
+                    } catch (e) {
+                        participantsNames = 'N/A';
+                    }
+
+                    const row = `
+                        <tr>
+                            <td>${item.reg_code}</td>
+                            <td>${item.sport}</td>
+                            <td>${item.category}</td>
+                            <td>${participantsNames}</td>
+                            <td>
+                                <button class="btn-edit" onclick="editRegistration('${item.reg_code}', '${item.sport}', '${item.category}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteRegistration('${item.reg_code}')">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            } catch (err) {
+                console.error("Error fetching registrations:", err);
+            }
+        }
+
+        async function editRegistration(regCode, currentSport, currentCategory) {
+            const newSport = prompt("Enter new Sport:", currentSport);
+            const newCategory = prompt("Enter new Category:", currentCategory);
+
+            if (!newSport || !newCategory) return;
+
+            try {
+                const response = await fetch(`/api/registrations/${regCode}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sport: newSport, category: newCategory })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert("Updated successfully!");
+                    fetchRegistrations();
+                } else {
+                    alert("Failed to update.");
+                }
+            } catch (err) {
+                console.error("Error updating:", err);
+            }
+        }
+
+        async function deleteRegistration(regCode) {
+            if (!confirm(`Are you sure you want to delete ${regCode}?`)) return;
+
+            try {
+                const response = await fetch(`/api/registrations/${regCode}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert("Deleted successfully!");
+                    fetchRegistrations();
+                } else {
+                    alert("Failed to delete.");
+                }
+            } catch (err) {
+                console.error("Error deleting:", err);
+            }
+        }
+
+        // Load data on page load
+        fetchRegistrations();
+    </script>
+</body>
+</html>

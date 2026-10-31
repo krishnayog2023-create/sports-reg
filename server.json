@@ -1,0 +1,81 @@
+const express = require('express');
+const { Pool } = require('pg');
+const path = require('path');
+
+const app = express();
+const port = process.env.PORT || 10000;
+
+// PostgreSQL Connection using Render Environment Variable
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+// Initialize Database Table
+pool.query(`
+  CREATE TABLE IF NOT EXISTS registrations (
+    reg_code VARCHAR(50) UNIQUE NOT NULL,
+    sport VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    participants JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).then(() => {
+  console.log("PostgreSQL Database connected & table checked.");
+}).catch(err => {
+  console.error("Database connection error:", err);
+});
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Register Endpoint
+app.post('/api/register', async (req, res) => {
+  try {
+    const { sport, category, participants } = req.body;
+    const reg_code = 'NKT-' + Math.floor(100000 + Math.random() * 900000);
+
+    const query = `
+      INSERT INTO registrations (reg_code, sport, category, participants)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `;
+    const values = [reg_code, sport, category, JSON.stringify(participants)];
+    
+    const result = await pool.query(query, values);
+    res.json({ success: true, reg_code: result.rows[0].reg_code });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Database error during registration' });
+  }
+});
+
+// Get All Registrations (Admin Panel)
+app.get('/api/registrations', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM registrations ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch registrations' });
+  }
+});
+
+// Delete Registration
+app.delete('/api/registrations/:reg_code', async (req, res) => {
+  try {
+    const { reg_code } = req.params;
+    await pool.query('DELETE FROM registrations WHERE reg_code = $1', [reg_code]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to delete registration' });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});

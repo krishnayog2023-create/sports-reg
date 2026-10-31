@@ -1,0 +1,13 @@
+{
+  "name": "sports-reg",
+  "version": "1.0.0",
+  "description": "Annual Sports Week Registration Portal",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.8",
+    "express": "^4.18.2"
+  }
+}
