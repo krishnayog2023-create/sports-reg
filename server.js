@@ -14,14 +14,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. Register Endpoint with Strict Same-Sport Duplicate Prevention & 3-Girls Rule
+// 1. Register Endpoint with Kabaddi squad rules, Box Cricket/Volleyball rules & Same-Sport check
 app.post('/register', async (req, res) => {
     try {
         const sportName = (req.body.sport || '').trim();
         const membersArray = req.body.members || [];
-
-        // Enforce restriction: Box Cricket and Volleyball require at least 3 girls
         const lowerSport = sportName.toLowerCase();
+
+        // Rule 1: Box Cricket and Volleyball require at least 3 girls
         if (lowerSport.includes('box cricket') || lowerSport.includes('volleyball')) {
             let girlCount = membersArray.filter(m => {
                 const g = (m.gender || '').toLowerCase();
@@ -32,6 +32,16 @@ app.post('/register', async (req, res) => {
                 return res.status(400).json({ 
                     success: false, 
                     error: 'Validation Error: Box Cricket and Volleyball teams must include at least 3 female participants.' 
+                });
+            }
+        }
+
+        // Rule 2: Kabaddi requires 7 to 10 players (7 playing + up to 3 optional substitutes)
+        if (lowerSport.includes('kabaddi')) {
+            if (membersArray.length < 7 || membersArray.length > 10) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Validation Error: Kabaddi team must have between 7 and 10 players (7 playing members and up to 3 optional substitutes).' 
                 });
             }
         }
@@ -64,7 +74,7 @@ app.post('/register', async (req, res) => {
             regCodeValue = String(regCodeValue).trim();
         }
 
-        // STRICT CHECK: Same primary code cannot register twice in the SAME sport (prevents multiple team entries in same game)
+        // STRICT CHECK: Same primary code cannot register twice in the SAME sport
         const { data: duplicateCheck, error: checkError } = await supabase
             .from('registrations')
             .select('reg_code, sport')
@@ -147,7 +157,7 @@ app.put('/api/registrations/:reg_code', async (req, res) => {
         if (error) throw error;
         res.status(200).json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
