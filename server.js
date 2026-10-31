@@ -14,14 +14,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. Register Endpoint with Sport & Gender Validation Rule
+// 1. Register Endpoint with Same-Sport Primary Code & 3-Girls Validation
 app.post('/register', async (req, res) => {
     try {
-        const sportName = (req.body.sport || '').toLowerCase();
+        const sportName = (req.body.sport || '').trim();
         const membersArray = req.body.members || [];
 
         // Enforce restriction: Box Cricket and Volleyball require at least 3 girls
-        if (sportName.includes('box cricket') || sportName.includes('volleyball')) {
+        const lowerSport = sportName.toLowerCase();
+        if (lowerSport.includes('box cricket') || lowerSport.includes('volleyball')) {
             let girlCount = membersArray.filter(m => {
                 const g = (m.gender || '').toLowerCase();
                 return g === 'girl' || g === 'female' || g === 'g';
@@ -56,27 +57,34 @@ app.post('/register', async (req, res) => {
             regCodeValue = membersArray[0].primary_code || membersArray[0].reg_code;
         }
 
-        // Ensure reg_code is completely unique
+        // Ensure reg_code exists or fallback to unique timestamp
         if (!regCodeValue || String(regCodeValue).trim() === '' || regCodeValue === 'undefined' || regCodeValue === 'null') {
             regCodeValue = 'REG-' + Date.now() + '-' + Math.floor(100 + Math.random() * 900);
         } else {
-            const { data: existing } = await supabase
-                .from('registrations')
-                .select('reg_code')
-                .eq('reg_code', regCodeValue)
-                .maybeSingle();
+            regCodeValue = String(regCodeValue).trim();
+        }
 
-            if (existing) {
-                regCodeValue = `${regCodeValue}-${Date.now().toString().slice(-4)}`;
-            }
+        // CHECK: Same primary code cannot register twice in the SAME sport
+        const { data: duplicateCheck, error: checkError } = await supabase
+            .from('registrations')
+            .select('reg_code, sport')
+            .eq('reg_code', regCodeValue)
+            .ilike('sport', sportName)
+            .maybeSingle();
+
+        if (duplicateCheck) {
+            return res.status(400).json({ 
+                success: false, 
+                error: `Registration Error: Primary code '${regCodeValue}' is already registered for '${sportName}'. You can use this code for other sports, but not twice in the same game.` 
+            });
         }
 
         const { data, error } = await supabase
             .from('registrations')
             .insert([
                 {
-                    category: req.body.category || 'Team',
-                    sport: req.body.sport || '',
+                    category: req.body.category || 'Individual',
+                    sport: sportName,
                     participants: participantValue,
                     reg_code: regCodeValue
                 }
