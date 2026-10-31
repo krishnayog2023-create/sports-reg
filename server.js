@@ -14,12 +14,30 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. Register Endpoint with 100% Unique Reg Code Generation
+// 1. Register Endpoint with Sport & Gender Validation Rule
 app.post('/register', async (req, res) => {
     try {
+        const sportName = (req.body.sport || '').toLowerCase();
+        const membersArray = req.body.members || [];
+
+        // Enforce restriction: Box Cricket and Volleyball require at least 3 girls
+        if (sportName.includes('box cricket') || sportName.includes('volleyball')) {
+            let girlCount = membersArray.filter(m => {
+                const g = (m.gender || '').toLowerCase();
+                return g === 'girl' || g === 'female' || g === 'g';
+            }).length;
+
+            if (girlCount < 3) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Validation Error: Box Cricket and Volleyball teams must include at least 3 female participants.' 
+                });
+            }
+        }
+
         let participantValue = 'Unknown Player';
-        if (req.body.members && Array.isArray(req.body.members) && req.body.members.length > 0) {
-            participantValue = req.body.members
+        if (membersArray.length > 0) {
+            participantValue = membersArray
                 .map(m => m.name || m.fullName)
                 .filter(Boolean)
                 .join(', ');
@@ -34,15 +52,14 @@ app.post('/register', async (req, res) => {
 
         // Extract incoming reg_code or primary_code
         let regCodeValue = req.body.reg_code || req.body.primary_code;
-        if (!regCodeValue && req.body.members && Array.isArray(req.body.members) && req.body.members.length > 0) {
-            regCodeValue = req.body.members[0].primary_code || req.body.members[0].reg_code;
+        if (!regCodeValue && membersArray.length > 0) {
+            regCodeValue = membersArray[0].primary_code || membersArray[0].reg_code;
         }
 
-        // Ensure reg_code is completely unique using timestamp + random suffix to avoid duplicate key errors
+        // Ensure reg_code is completely unique
         if (!regCodeValue || String(regCodeValue).trim() === '' || regCodeValue === 'undefined' || regCodeValue === 'null') {
             regCodeValue = 'REG-' + Date.now() + '-' + Math.floor(100 + Math.random() * 900);
         } else {
-            // Check if this reg_code already exists in Supabase
             const { data: existing } = await supabase
                 .from('registrations')
                 .select('reg_code')
@@ -50,7 +67,6 @@ app.post('/register', async (req, res) => {
                 .maybeSingle();
 
             if (existing) {
-                // Append timestamp to make it unique if collision occurs
                 regCodeValue = `${regCodeValue}-${Date.now().toString().slice(-4)}`;
             }
         }
@@ -59,7 +75,7 @@ app.post('/register', async (req, res) => {
             .from('registrations')
             .insert([
                 {
-                    category: req.body.category || 'Individual',
+                    category: req.body.category || 'Team',
                     sport: req.body.sport || '',
                     participants: participantValue,
                     reg_code: regCodeValue
