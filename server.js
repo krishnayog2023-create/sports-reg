@@ -5,7 +5,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Initialize Supabase Client (HTTP/REST API based, no SSL certificate errors)
+// Initialize Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -17,7 +17,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Register Endpoint
 app.post('/register', async (req, res) => {
     try {
-        // Frontend form se aane wale alag-alag field names ko check karega
         const participantValue = 
             req.body.participants || 
             req.body.participantName || 
@@ -25,13 +24,19 @@ app.post('/register', async (req, res) => {
             req.body.fullName || 
             'Unknown Player';
 
+        const regCodeValue = 
+            req.body.reg_code || 
+            req.body.primary_code || 
+            '00000';
+
         const { data, error } = await supabase
             .from('registrations')
             .insert([
                 {
                     category: req.body.category || 'Individual',
                     sport: req.body.sport || '',
-                    participants: participantValue // Ab yahan sahi name/data save hoga
+                    participants: participantValue,
+                    reg_code: regCodeValue
                 }
             ]);
 
