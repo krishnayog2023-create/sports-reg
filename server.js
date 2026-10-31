@@ -15,39 +15,38 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Register Endpoint
-// Apne registration POST route ke andar ye logic use karo:
 app.post('/register', async (req, res) => {
-  try {
-    // Frontend form se aane wale alag-alag field names ko check karega
-    const participantValue = 
-      req.body.participants || 
-      req.body.participantName || 
-      req.body.name || 
-      req.body.fullName || 
-      'Unknown Player';
+    try {
+        // Frontend form se aane wale alag-alag field names ko check karega
+        const participantValue = 
+            req.body.participants || 
+            req.body.participantName || 
+            req.body.name || 
+            req.body.fullName || 
+            'Unknown Player';
 
-    const { data, error } = await supabase
-      .from('registrations')
-      .insert([
-        {
-          category: req.body.category || 'Individual',
-          sport: req.body.sport || '',
-          participants: participantValue, // Ab yahan sahi name/data save hoga
-          // Baaki fields jo aapke form mein hain, unhe yahan map kar lein
+        const { data, error } = await supabase
+            .from('registrations')
+            .insert([
+                {
+                    category: req.body.category || 'Individual',
+                    sport: req.body.sport || '',
+                    participants: participantValue // Ab yahan sahi name/data save hoga
+                }
+            ]);
+
+        if (error) {
+            console.error('Supabase Error:', error);
+            return res.status(400).json({ success: false, error: error.message });
         }
-      ]);
 
-    if (error) {
-      console.error('Supabase Error:', error);
-      return res.status(400).json({ success: false, error: error.message });
+        res.status(200).json({ success: true, data });
+    } catch (err) {
+        console.error('Server Error:', err);
+        res.status(500).json({ success: false, error: err.message });
     }
-
-    res.status(200).json({ success: true, data });
-  } catch (err) {
-    console.error('Server Error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
 });
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });
