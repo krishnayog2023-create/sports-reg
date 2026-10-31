@@ -46,12 +46,12 @@
             </div>
 
             <div class="form-group">
-                <label for="primary_code">Primary Code (Exact 5 digits or Code) *</label>
-                <input type="text" id="primary_code" name="primary_code" placeholder="Enter code" required>
+                <label for="primary_code">Primary Code / Reg Code *</label>
+                <input type="text" id="primary_code" name="primary_code" placeholder="Enter your unique code" required>
             </div>
 
             <div id="dynamicParticipantsContainer">
-                <!-- Dynamic player inputs will load here -->
+                <!-- Dynamic fields will appear here -->
             </div>
 
             <button type="submit" class="btn">Submit Registration</button>
@@ -66,49 +66,125 @@
             const container = document.getElementById('dynamicParticipantsContainer');
             container.innerHTML = '';
 
-            let minPlayers = 1;
-            let maxPlayers = 1;
-            let labelText = "Participant Name *";
-
             const lower = sport.toLowerCase();
-            if (lower.includes('kabaddi')) {
-                minPlayers = 7;
-                maxPlayers = 10;
-                labelText = "Kabaddi Squad Member (7 Playing + up to 3 Substitutes)";
-            } else if (lower.includes('box cricket') || lower.includes('volleyball')) {
-                minPlayers = 6;
-                maxPlayers = 11;
-                labelText = "Team Member (Min 3 Girls required)";
-            } else if (lower.includes('carrom')) {
-                minPlayers = 1;
-                maxPlayers = 2;
-                labelText = "Player Name";
-            } else {
-                minPlayers = 1;
-                maxPlayers = 1;
-                labelText = "Full Name *";
-            }
+            let html = '';
 
-            let html = `<label>${labelText} (${minPlayers}${maxPlayers > minPlayers ? ' to ' + maxPlayers : ''}):</label>`;
-            
-            for (let i = 0; i < minPlayers; i++) {
+            if (lower.includes('kabaddi')) {
+                html += `<label>Kabaddi Squad (7 Playing + up to 3 Substitutes) *</label>`;
+                for (let i = 0; i < 7; i++) {
+                    html += `
+                        <div class="member-box">
+                            <input type="text" placeholder="Player ${i + 1} (Mandatory) *" name="memberName_${i}" required style="margin-bottom: 8px;">
+                            <select name="memberGender_${i}" required>
+                                <option value="">Select Gender *</option>
+                                <option value="Boy">Boy / Male</option>
+                                <option value="Girl">Girl / Female</option>
+                            </select>
+                        </div>
+                    `;
+                }
+                html += `<div style="margin: 10px 0 5px 0; font-size: 13px; color: #94a3b8;">Optional Substitutes (Up to 3):</div>`;
+                for (let i = 7; i < 10; i++) {
+                    html += `
+                        <div class="member-box" style="border-style: dashed;">
+                            <input type="text" placeholder="Substitute ${i + 1} Name (Optional)" name="memberName_${i}" style="margin-bottom: 8px;">
+                            <select name="memberGender_${i}">
+                                <option value="">Select Gender (Optional)</option>
+                                <option value="Boy">Boy / Male</option>
+                                <option value="Girl">Girl / Female</option>
+                            </select>
+                        </div>
+                    `;
+                }
+            } else if (lower.includes('box cricket') || lower.includes('volleyball')) {
+                html += `<label>Team Members (Min 3 Girls Required) *</label>`;
+                for (let i = 0; i < 6; i++) {
+                    html += `
+                        <div class="member-box">
+                            <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required style="margin-bottom: 8px;">
+                            <select name="memberGender_${i}" required>
+                                <option value="">Select Gender *</option>
+                                <option value="Boy">Boy / Male</option>
+                                <option value="Girl">Girl / Female</option>
+                            </select>
+                        </div>
+                    `;
+                }
+            } else {
                 html += `
-                    <div class="member-box">
-                        <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required style="margin-bottom: 8px;">
-                        <select name="memberGender_${i}" required>
-                            <option value="">Select Gender *</option>
-                            <option value="Boy">Boy / Male</option>
-                            <option value="Girl">Girl / Female</option>
-                        </select>
+                    <div class="form-group">
+                        <label>Participant Name *</label>
+                        <div class="member-box">
+                            <input type="text" placeholder="Enter Full Name *" name="memberName_0" required style="margin-bottom: 8px;">
+                            <select name="memberGender_0" required>
+                                <option value="">Select Gender *</option>
+                                <option value="Boy">Boy / Male</option>
+                                <option value="Girl">Girl / Female</option>
+                            </select>
+                        </div>
                     </div>
                 `;
             }
 
-            // If max > min, add optional extra fields (like substitutes for kabaddi)
-            if (maxPlayers > minPlayers) {
-                html += `<div style="margin: 10px 0 5px 0; font-size: 13px; color: #94a3b8;">Optional Substitutes / Extra Members:</div>`;
-                for (let i = minPlayers; i < maxPlayers; i++) {
-                    html += `
-                        <div class="member-box" style="border-style: dashed;">
-                            <input type="text" placeholder="Substitute ${i + 1} Name (Optional)" name="memberName_${i}" style="margin-bottom: 8px;">
-                            <select name="member
+            container.innerHTML = html;
+        }
+
+        window.onload = function() {
+            updatePlayerFields();
+        };
+
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const msgDiv = document.getElementById('message');
+            msgDiv.style.color = '#fff';
+            msgDiv.textContent = 'Submitting registration...';
+
+            const sport = document.getElementById('sport').value;
+            const category = document.getElementById('category').value;
+            const primary_code = document.getElementById('primary_code').value;
+
+            const members = [];
+            const memberBoxes = document.querySelectorAll('.member-box');
+            memberBoxes.forEach((box, index) => {
+                const nameInput = box.querySelector(`input[name="memberName_${index}"]`);
+                const genderSelect = box.querySelector(`select[name="memberGender_${index}"]`);
+                
+                if (nameInput && nameInput.value.trim() !== '') {
+                    members.push({
+                        name: nameInput.value.trim(),
+                        gender: genderSelect ? genderSelect.value : 'Boy'
+                    });
+                }
+            });
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sport,
+                        category,
+                        primary_code,
+                        members
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    msgDiv.style.color = '#28a745';
+                    msgDiv.innerHTML = `Registration Confirmed! <br> Unique Code: <strong>${result.reg_code}</strong>`;
+                    document.getElementById('registrationForm').reset();
+                    updatePlayerFields();
+                } else {
+                    msgDiv.style.color = '#dc3545';
+                    msgDiv.textContent = result.error || 'Registration failed.';
+                }
+            } catch (err) {
+                console.error(err);
+                msgDiv.style.color = '#dc3545';
+                msgDiv.textContent = 'Network error. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html>
