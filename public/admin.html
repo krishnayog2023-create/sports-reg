@@ -15,6 +15,7 @@
         .btn { padding: 6px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
         .btn-edit { background-color: #ffc107; color: #000; margin-right: 5px; }
         .btn-delete { background-color: #dc3545; color: white; }
+        .btn-export { background-color: #28a745; color: white; margin-bottom: 15px; font-size: 14px; }
         .loading { text-align: center; padding: 20px; font-size: 16px; color: #666; }
     </style>
 </head>
@@ -22,6 +23,9 @@
 
     <h2>Admin Dashboard - Registrations</h2>
     
+    <!-- Export Button Added Here -->
+    <button class="btn btn-export" onclick="exportToExcel()">📥 Export to Excel / CSV</button>
+
     <div class="table-container">
         <table>
             <thead>
@@ -55,7 +59,6 @@
                 }
 
                 data.forEach(item => {
-                    // Extract participant names securely regardless of format (string, object, or array)
                     let participantsText = 'Unknown Player';
                     if (item.participants) {
                         if (typeof item.participants === 'string') {
@@ -84,6 +87,48 @@
                 console.error('Error loading data:', err);
                 document.getElementById('tableBody').innerHTML = `<tr><td colspan="5" class="loading" style="color: red;">Error loading data from server.</td></tr>`;
             }
+        }
+
+        function exportToExcel() {
+            fetch('/api/registrations')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        alert('No data to export!');
+                        return;
+                    }
+                    let csvContent = "data:text/csv;charset=utf-8,Reg Code,Sport,Category,Participants\n";
+                    data.forEach(row => {
+                        let pText = 'Unknown Player';
+                        if (row.participants) {
+                            if (typeof row.participants === 'string') {
+                                pText = row.participants;
+                            } else if (Array.isArray(row.participants)) {
+                                pText = row.participants.map(p => p.name || p.fullName || JSON.stringify(p)).join(', ');
+                            } else if (typeof row.participants === 'object') {
+                                pText = row.participants.name || row.participants.fullName || JSON.stringify(row.participants);
+                            }
+                        }
+                        // Clean up strings for CSV format
+                        pText = pText.replace(/"/g, '""');
+                        let sportStr = (row.sport || '').replace(/"/g, '""');
+                        let catStr = (row.category || '').replace(/"/g, '""');
+                        let codeStr = (row.reg_code || '').replace(/"/g, '""');
+
+                        csvContent += `"${codeStr}","${sportStr}","${catStr}","${pText}"\n`;
+                    });
+                    let encodedUri = encodeURI(csvContent);
+                    let link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "sports_registrations.csv");
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                })
+                .catch(err => {
+                    console.error('Export error:', err);
+                    alert('Failed to export data.');
+                });
         }
 
         async function deleteRegistration(regCode) {
