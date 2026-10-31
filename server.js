@@ -28,8 +28,14 @@ app.post('/register', async (req, res) => {
             });
         }
 
-        // 1. Box Cricket & Volleyball: Min 3 girls check
-        if (lowerSport.includes('box cricket') || lowerSport.includes('volleyball')) {
+        // 1. Box Cricket Validation: Exactly 10 players & Min 3 girls
+        if (lowerSport.includes('box cricket')) {
+            if (membersArray.length !== 10) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Validation Error: Box Cricket team must have exactly 10 players.' 
+                });
+            }
             let girlCount = membersArray.filter(m => {
                 const g = (m.gender || '').toLowerCase();
                 return g === 'girl' || g === 'female' || g === 'g';
@@ -38,12 +44,33 @@ app.post('/register', async (req, res) => {
             if (girlCount < 3) {
                 return res.status(400).json({ 
                     success: false, 
-                    error: 'Validation Error: Box Cricket and Volleyball teams must include at least 3 female participants.' 
+                    error: 'Validation Error: Box Cricket team must include at least 3 female participants.' 
                 });
             }
         }
 
-        // 2. Kabaddi: 7 to 10 players check
+        // 2. Volleyball Validation: Exactly 8 players & Min 3 girls
+        if (lowerSport.includes('volleyball')) {
+            if (membersArray.length !== 8) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Validation Error: Volleyball team must have exactly 8 players.' 
+                });
+            }
+            let girlCount = membersArray.filter(m => {
+                const g = (m.gender || '').toLowerCase();
+                return g === 'girl' || g === 'female' || g === 'g';
+            }).length;
+
+            if (girlCount < 3) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Validation Error: Volleyball team must include at least 3 female participants.' 
+                });
+            }
+        }
+
+        // 3. Kabaddi Validation: 7 to 10 players
         if (lowerSport.includes('kabaddi')) {
             if (membersArray.length < 7 || membersArray.length > 10) {
                 return res.status(400).json({ 
@@ -53,7 +80,7 @@ app.post('/register', async (req, res) => {
             }
         }
 
-        // 3. Format participant names and IDs for Excel mapping
+        // 4. Format participant names and IDs for Excel mapping
         let participantValue = 'Unknown Player';
         if (membersArray.length > 0) {
             participantValue = membersArray
@@ -64,7 +91,7 @@ app.post('/register', async (req, res) => {
             participantValue = req.body.participants || 'Unknown Player';
         }
 
-        // 4. Generate Sport Prefix for Serial Reg Code (e.g. BC01, VB02, KB03)
+        // 5. Generate Sport Prefix for Serial Reg Code (e.g. BC01, VB02, KB03)
         let prefix = 'GEN';
         if (lowerSport.includes('box cricket')) prefix = 'BC';
         else if (lowerSport.includes('volleyball')) prefix = 'VB';
@@ -72,7 +99,6 @@ app.post('/register', async (req, res) => {
         else if (lowerSport.includes('table tennis')) prefix = 'TT';
         else if (lowerSport.includes('carrom')) prefix = 'CR';
 
-        // Count existing registrations for this specific sport to determine serial number
         const { count, error: countError } = await supabase
             .from('registrations')
             .select('*', { count: 'exact', head: true })
@@ -82,15 +108,7 @@ app.post('/register', async (req, res) => {
         const nextSerial = (count || 0) + 1;
         const regCodeValue = `${prefix}${String(nextSerial).padStart(2, '0')}`;
 
-        // 5. STRICT CHECK: Same captain/identifier cannot register twice in the SAME sport
-        const { data: duplicateCheck } = await supabase
-            .from('registrations')
-            .select('reg_code, sport, participants')
-            .ilike('sport', sportName)
-            .textSearch('participants', captainInput)
-            .maybeSingle();
-
-        // Alternatively, we can check if this specific identifier already registered in this sport
+        // 6. STRICT CHECK: Same identifier cannot register twice in the SAME sport
         const { data: allSportRegs } = await supabase
             .from('registrations')
             .select('participants')
@@ -112,7 +130,7 @@ app.post('/register', async (req, res) => {
             });
         }
 
-        // 6. Insert into Supabase
+        // 7. Insert into Supabase
         const { data, error } = await supabase
             .from('registrations')
             .insert([

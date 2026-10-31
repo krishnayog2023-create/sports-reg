@@ -31,8 +31,8 @@
                     <option value="">-- Choose Sport --</option>
                     <option value="Table Tennis (Individual)">Table Tennis (Individual)</option>
                     <option value="Carrom">Carrom</option>
-                    <option value="Box Cricket">Box Cricket (Min 3 Girls)</option>
-                    <option value="Volleyball">Volleyball (Min 3 Girls)</option>
+                    <option value="Box Cricket">Box Cricket (10 Players, Min 3 Girls)</option>
+                    <option value="Volleyball">Volleyball (8 Players, Min 3 Girls)</option>
                     <option value="Kabaddi">Kabaddi (7 to 10 Players)</option>
                 </select>
             </div>
@@ -121,9 +121,24 @@
                         </div>
                     `;
                 }
-            } else if (lower.includes('box cricket') || lower.includes('volleyball')) {
-                html += `<label>Team Members (Min 3 Girls Required) *</label>`;
-                for (let i = 0; i < 6; i++) {
+            } else if (lower.includes('box cricket')) {
+                html += `<label>Box Cricket Team Members (10 Players, Min 3 Girls Required) *</label>`;
+                for (let i = 0; i < 10; i++) {
+                    html += `
+                        <div class="member-box">
+                            <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required>
+                            <input type="text" placeholder="Player ${i + 1} ${idLabel} *" name="memberId_${i}" required>
+                            <select name="memberGender_${i}" required>
+                                <option value="">Select Gender *</option>
+                                <option value="Boy">Male / Boy</option>
+                                <option value="Girl">Female / Girl</option>
+                            </select>
+                        </div>
+                    `;
+                }
+            } else if (lower.includes('volleyball')) {
+                html += `<label>Volleyball Team Members (8 Players, Min 3 Girls Required) *</label>`;
+                for (let i = 0; i < 8; i++) {
                     html += `
                         <div class="member-box">
                             <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required>
