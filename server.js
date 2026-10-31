@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. Register Endpoint with Same-Sport Primary Code & 3-Girls Validation
+// 1. Register Endpoint with Strict Same-Sport Duplicate Prevention & 3-Girls Rule
 app.post('/register', async (req, res) => {
     try {
         const sportName = (req.body.sport || '').trim();
@@ -64,7 +64,7 @@ app.post('/register', async (req, res) => {
             regCodeValue = String(regCodeValue).trim();
         }
 
-        // CHECK: Same primary code cannot register twice in the SAME sport
+        // STRICT CHECK: Same primary code cannot register twice in the SAME sport (prevents multiple team entries in same game)
         const { data: duplicateCheck, error: checkError } = await supabase
             .from('registrations')
             .select('reg_code, sport')
@@ -75,7 +75,7 @@ app.post('/register', async (req, res) => {
         if (duplicateCheck) {
             return res.status(400).json({ 
                 success: false, 
-                error: `Registration Error: Primary code '${regCodeValue}' is already registered for '${sportName}'. You can use this code for other sports, but not twice in the same game.` 
+                error: `Registration Error: Primary code '${regCodeValue}' is already registered for '${sportName}'. You cannot register twice for the same game using the same code.` 
             });
         }
 
@@ -83,7 +83,7 @@ app.post('/register', async (req, res) => {
             .from('registrations')
             .insert([
                 {
-                    category: req.body.category || 'Individual',
+                    category: req.body.category || 'Team',
                     sport: sportName,
                     participants: participantValue,
                     reg_code: regCodeValue
@@ -147,7 +147,7 @@ app.put('/api/registrations/:reg_code', async (req, res) => {
         if (error) throw error;
         res.status(200).json({ success: true });
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
 
