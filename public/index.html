@@ -6,12 +6,12 @@
     <title>Annual Sports Week 2026-27 - Registration Portal</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #111b27; color: #fff; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { background: #1a2634; padding: 30px; border-radius: 10px; width: 100%; max-width: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .container { background: #1a2634; padding: 30px; border-radius: 10px; width: 100%; max-width: 550px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         h2 { text-align: center; color: #4facfe; margin-bottom: 5px; }
         p { text-align: center; color: #aaa; font-size: 14px; margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-        select, input { width: 100%; padding: 10px; border: 1px solid #334155; background: #0f172a; color: #fff; border-radius: 5px; font-size: 14px; box-sizing: border-box; }
+        select, input { width: 100%; padding: 10px; border: 1px solid #334155; background: #0f172a; color: #fff; border-radius: 5px; font-size: 14px; box-sizing: border-box; margin-bottom: 8px; }
         .btn { width: 100%; background: #007bff; color: white; padding: 12px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn:hover { background: #0056b3; }
         .member-box { background: #0f172a; padding: 12px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #334155; }
@@ -39,19 +39,20 @@
 
             <div class="form-group">
                 <label for="category">Category *</label>
-                <select id="category" name="category" required>
+                <select id="category" name="category" required onchange="updateCategoryLabels()">
                     <option value="Student">Student</option>
-                    <option value="Team">Team</option>
+                    <option value="Teaching Staff">Teaching Staff</option>
+                    <option value="Non-Teaching Staff">Non-Teaching Staff</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="primary_code">Primary Code / Reg Code *</label>
-                <input type="text" id="primary_code" name="primary_code" placeholder="Enter your unique code" required>
+                <label id="primaryCodeLabel" for="primary_code">Captain / Participant Student ID *</label>
+                <input type="text" id="primary_code" name="primary_code" placeholder="Enter Student ID" required>
             </div>
 
             <div id="dynamicParticipantsContainer">
-                <!-- Dynamic fields will appear here -->
+                <!-- Dynamic player fields load here -->
             </div>
 
             <button type="submit" class="btn">Submit Registration</button>
@@ -61,24 +62,47 @@
     </div>
 
     <script>
+        function updateCategoryLabels() {
+            const category = document.getElementById('category').value;
+            const label = document.getElementById('primaryCodeLabel');
+            const input = document.getElementById('primary_code');
+
+            if (category === 'Teaching Staff' || category === 'Non-Teaching Staff') {
+                label.textContent = "Staff Phone Number (Used to track duplicate entries) *";
+                input.placeholder = "Enter 10-digit mobile number";
+                input.type = "tel";
+                input.maxLength = "10";
+            } else {
+                label.textContent = "Student ID *";
+                input.placeholder = "Enter Student ID";
+                input.type = "text";
+                input.removeAttribute("maxLength");
+            }
+            updatePlayerFields();
+        }
+
         function updatePlayerFields() {
             const sport = document.getElementById('sport').value;
+            const category = document.getElementById('category').value;
             const container = document.getElementById('dynamicParticipantsContainer');
             container.innerHTML = '';
 
             const lower = sport.toLowerCase();
+            const isStaff = (category === 'Teaching Staff' || category === 'Non-Teaching Staff');
+            const idLabel = isStaff ? 'Phone Number / Staff ID' : 'Student ID';
             let html = '';
 
             if (lower.includes('kabaddi')) {
-                html += `<label>Kabaddi Squad (7 Playing + up to 3 Substitutes) *</label>`;
+                html += `<label>Kabaddi Squad Members (7 Playing + up to 3 Substitutes) *</label>`;
                 for (let i = 0; i < 7; i++) {
                     html += `
                         <div class="member-box">
-                            <input type="text" placeholder="Player ${i + 1} (Mandatory) *" name="memberName_${i}" required style="margin-bottom: 8px;">
+                            <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required>
+                            <input type="text" placeholder="Player ${i + 1} ${idLabel} *" name="memberId_${i}" required>
                             <select name="memberGender_${i}" required>
                                 <option value="">Select Gender *</option>
-                                <option value="Boy">Boy / Male</option>
-                                <option value="Girl">Girl / Female</option>
+                                <option value="Boy">Male / Boy</option>
+                                <option value="Girl">Female / Girl</option>
                             </select>
                         </div>
                     `;
@@ -87,11 +111,12 @@
                 for (let i = 7; i < 10; i++) {
                     html += `
                         <div class="member-box" style="border-style: dashed;">
-                            <input type="text" placeholder="Substitute ${i + 1} Name (Optional)" name="memberName_${i}" style="margin-bottom: 8px;">
+                            <input type="text" placeholder="Substitute ${i + 1} Name (Optional)" name="memberName_${i}">
+                            <input type="text" placeholder="Substitute ${i + 1} ${idLabel} (Optional)" name="memberId_${i}">
                             <select name="memberGender_${i}">
                                 <option value="">Select Gender (Optional)</option>
-                                <option value="Boy">Boy / Male</option>
-                                <option value="Girl">Girl / Female</option>
+                                <option value="Boy">Male / Boy</option>
+                                <option value="Girl">Female / Girl</option>
                             </select>
                         </div>
                     `;
@@ -101,11 +126,12 @@
                 for (let i = 0; i < 6; i++) {
                     html += `
                         <div class="member-box">
-                            <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required style="margin-bottom: 8px;">
+                            <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required>
+                            <input type="text" placeholder="Player ${i + 1} ${idLabel} *" name="memberId_${i}" required>
                             <select name="memberGender_${i}" required>
                                 <option value="">Select Gender *</option>
-                                <option value="Boy">Boy / Male</option>
-                                <option value="Girl">Girl / Female</option>
+                                <option value="Boy">Male / Boy</option>
+                                <option value="Girl">Female / Girl</option>
                             </select>
                         </div>
                     `;
@@ -113,13 +139,14 @@
             } else {
                 html += `
                     <div class="form-group">
-                        <label>Participant Name *</label>
+                        <label>Participant Details *</label>
                         <div class="member-box">
-                            <input type="text" placeholder="Enter Full Name *" name="memberName_0" required style="margin-bottom: 8px;">
+                            <input type="text" placeholder="Full Name *" name="memberName_0" required>
+                            <input type="text" placeholder="${idLabel} *" name="memberId_0" required>
                             <select name="memberGender_0" required>
                                 <option value="">Select Gender *</option>
-                                <option value="Boy">Boy / Male</option>
-                                <option value="Girl">Girl / Female</option>
+                                <option value="Boy">Male / Boy</option>
+                                <option value="Girl">Female / Girl</option>
                             </select>
                         </div>
                     </div>
@@ -130,7 +157,7 @@
         }
 
         window.onload = function() {
-            updatePlayerFields();
+            updateCategoryLabels();
         };
 
         document.getElementById('registrationForm').addEventListener('submit', async function(e) {
@@ -141,17 +168,19 @@
 
             const sport = document.getElementById('sport').value;
             const category = document.getElementById('category').value;
-            const primary_code = document.getElementById('primary_code').value;
+            let primary_code = document.getElementById('primary_code').value.trim();
 
             const members = [];
             const memberBoxes = document.querySelectorAll('.member-box');
             memberBoxes.forEach((box, index) => {
                 const nameInput = box.querySelector(`input[name="memberName_${index}"]`);
+                const idInput = box.querySelector(`input[name="memberId_${index}"]`);
                 const genderSelect = box.querySelector(`select[name="memberGender_${index}"]`);
                 
                 if (nameInput && nameInput.value.trim() !== '') {
                     members.push({
                         name: nameInput.value.trim(),
+                        student_id: idInput ? idInput.value.trim() : '',
                         gender: genderSelect ? genderSelect.value : 'Boy'
                     });
                 }
@@ -172,9 +201,9 @@
                 const result = await response.json();
                 if (response.ok && result.success) {
                     msgDiv.style.color = '#28a745';
-                    msgDiv.innerHTML = `Registration Confirmed! <br> Unique Code: <strong>${result.reg_code}</strong>`;
+                    msgDiv.innerHTML = `Registration Confirmed! <br> Assigned Serial Code: <strong>${result.reg_code}</strong>`;
                     document.getElementById('registrationForm').reset();
-                    updatePlayerFields();
+                    updateCategoryLabels();
                 } else {
                     msgDiv.style.color = '#dc3545';
                     msgDiv.textContent = result.error || 'Registration failed.';
