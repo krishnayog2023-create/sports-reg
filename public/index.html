@@ -95,10 +95,15 @@
             if (lower.includes('kabaddi')) {
                 html += `<label>Kabaddi Squad Members (7 Playing + up to 3 Substitutes) *</label>`;
                 for (let i = 0; i < 7; i++) {
+                    let playerTitle = `Player ${i + 1}`;
+                    if (i === 0) playerTitle = `Icon Player 1 (Male)`;
+                    else if (i === 1) playerTitle = `Icon Player 2 (Male)`;
+                    else if (i === 2) playerTitle = `Icon Player 1 (Female)`;
+
                     html += `
                         <div class="member-box">
-                            <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required>
-                            <input type="text" placeholder="Player ${i + 1} ${idLabel} *" name="memberId_${i}" required>
+                            <input type="text" placeholder="${playerTitle} Name *" name="memberName_${i}" required>
+                            <input type="text" placeholder="${playerTitle} ${idLabel} *" name="memberId_${i}" required>
                             <select name="memberGender_${i}" required>
                                 <option value="">Select Gender *</option>
                                 <option value="Boy">Male / Boy</option>
@@ -124,10 +129,15 @@
             } else if (lower.includes('box cricket')) {
                 html += `<label>Box Cricket Team Members (10 Players, Min 3 Girls Required) *</label>`;
                 for (let i = 0; i < 10; i++) {
+                    let playerTitle = `Player ${i + 1}`;
+                    if (i === 0) playerTitle = `Icon Player 1 (Male)`;
+                    else if (i === 1) playerTitle = `Icon Player 2 (Male)`;
+                    else if (i === 2) playerTitle = `Icon Player 1 (Female)`;
+
                     html += `
                         <div class="member-box">
-                            <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required>
-                            <input type="text" placeholder="Player ${i + 1} ${idLabel} *" name="memberId_${i}" required>
+                            <input type="text" placeholder="${playerTitle} Name *" name="memberName_${i}" required>
+                            <input type="text" placeholder="${playerTitle} ${idLabel} *" name="memberId_${i}" required>
                             <select name="memberGender_${i}" required>
                                 <option value="">Select Gender *</option>
                                 <option value="Boy">Male / Boy</option>
@@ -139,10 +149,15 @@
             } else if (lower.includes('volleyball')) {
                 html += `<label>Volleyball Team Members (8 Players, Min 3 Girls Required) *</label>`;
                 for (let i = 0; i < 8; i++) {
+                    let playerTitle = `Player ${i + 1}`;
+                    if (i === 0) playerTitle = `Icon Player 1 (Male)`;
+                    else if (i === 1) playerTitle = `Icon Player 2 (Male)`;
+                    else if (i === 2) playerTitle = `Icon Player 1 (Female)`;
+
                     html += `
                         <div class="member-box">
-                            <input type="text" placeholder="Player ${i + 1} Name *" name="memberName_${i}" required>
-                            <input type="text" placeholder="Player ${i + 1} ${idLabel} *" name="memberId_${i}" required>
+                            <input type="text" placeholder="${playerTitle} Name *" name="memberName_${i}" required>
+                            <input type="text" placeholder="${playerTitle} ${idLabel} *" name="memberId_${i}" required>
                             <select name="memberGender_${i}" required>
                                 <option value="">Select Gender *</option>
                                 <option value="Boy">Male / Boy</option>
