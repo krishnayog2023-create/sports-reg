@@ -25,6 +25,20 @@
         <p>Official Unified Registration Portal</p>
 
         <form id="registrationForm">
+            <!-- Declaration & Undertaking Box at the very beginning -->
+            <div class="form-group" style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px;">
+                <h3 style="color: #4facfe; margin-top: 0; font-size: 15px; margin-bottom: 10px;">DECLARATION & UNDERTAKING</h3>
+                <div style="font-size: 12px; color: #cbd5e1; max-height: 110px; overflow-y: auto; margin-bottom: 12px; padding-right: 5px; line-height: 1.4;">
+                    <p style="margin: 0 0 8px 0;"><strong>1. Personal Safety & Belongings:</strong> I understand that I am responsible for my own safety, health and personal belongings during the event. The Sports Committee, College, College Management and organisers shall not be held responsible for loss, theft or damage to my belongings or unforeseen injuries and accidents arising from circumstances beyond their control. I agree to disclose relevant medical conditions and follow all safety instructions.</p>
+                    <p style="margin: 0 0 8px 0;"><strong>2. Damage to Property & Disciplinary Action:</strong> I undertake to handle all sports equipment, college property and venue facilities responsibly. Any damage, breakage or loss caused intentionally or through negligence by me or my team shall be chargeable, including applicable repair or replacement costs. I understand that misconduct or violation of event rules may result in disqualification or further disciplinary action by the College Authorities.</p>
+                    <p style="margin: 0 0 0 0;"><strong>3. Parent / Guardian Consent (For Participants Below 18 Years):</strong> I confirm that my parent/guardian is aware of and consents to my participation in the Intra-College Sports Week and agrees to the above terms and conditions.</p>
+                </div>
+                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; color: #fff; margin: 0;">
+                    <input type="checkbox" id="declaration_check" required style="width: auto; margin-top: 3px;">
+                    <span>I have read, understood, and agree to the above terms and conditions. *</span>
+                </label>
+            </div>
+
             <div class="form-group">
                 <label for="sport">Select Sport *</label>
                 <select id="sport" name="sport" required onchange="updatePlayerFields()">
@@ -59,6 +73,20 @@
         </form>
 
         <div id="message"></div>
+    </div>
+
+    <!-- WhatsApp QR Code Popup Modal -->
+    <div id="qrModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: #1a2634; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; width: 90%; border: 1px solid #334155; box-shadow: 0 8px 20px rgba(0,0,0,0.5);">
+            <h3 style="color: #4facfe; margin-top: 0; margin-bottom: 10px;">Registration Confirmed! 🎉</h3>
+            <p style="font-size: 14px; color: #aaa; margin-bottom: 15px;">Scan this QR code to join the official WhatsApp group:</p>
+            <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block; margin-bottom: 15px;">
+                <!-- Put your WhatsApp QR image filename or base64 here -->
+                <img src="whatsapp-qr.jpg" alt="WhatsApp Group QR" style="width: 200px; height: 200px; display: block;" />
+            </div>
+            <div id="modalRegCode" style="font-size: 15px; font-weight: bold; color: #28a745; margin-bottom: 20px;"></div>
+            <button type="button" class="btn" onclick="closeQrModal()">Done / Finish</button>
+        </div>
     </div>
 
     <script>
@@ -190,8 +218,23 @@
             updateCategoryLabels();
         };
 
+        function closeQrModal() {
+            document.getElementById('qrModal').style.display = 'none';
+            document.getElementById('registrationForm').reset();
+            updateCategoryLabels();
+            document.getElementById('message').textContent = '';
+        }
+
         document.getElementById('registrationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            // Ensure declaration checkbox is checked
+            const declCheck = document.getElementById('declaration_check');
+            if (!declCheck.checked) {
+                alert('Please accept the Declaration & Undertaking to proceed.');
+                return;
+            }
+
             const msgDiv = document.getElementById('message');
             msgDiv.style.color = '#fff';
             msgDiv.textContent = 'Submitting registration...';
@@ -230,10 +273,10 @@
 
                 const result = await response.json();
                 if (response.ok && result.success) {
-                    msgDiv.style.color = '#28a745';
-                    msgDiv.innerHTML = `Registration Confirmed! <br> Assigned Serial Code: <strong>${result.reg_code}</strong>`;
-                    document.getElementById('registrationForm').reset();
-                    updateCategoryLabels();
+                    msgDiv.textContent = '';
+                    // Show QR Code Popup Modal
+                    document.getElementById('modalRegCode').textContent = `Assigned Serial Code: ${result.reg_code}`;
+                    document.getElementById('qrModal').style.display = 'flex';
                 } else {
                     msgDiv.style.color = '#dc3545';
                     msgDiv.textContent = result.error || 'Registration failed.';
