@@ -80,7 +80,7 @@ app.post('/register', async (req, res) => {
             }
         }
 
-        // 4. Fetch all existing registrations for this sport to check player-level duplication
+        // 4. Fetch existing registrations for player duplication check
         const { data: existingRegs, error: fetchError } = await supabase
             .from('registrations')
             .select('participants')
@@ -88,7 +88,6 @@ app.post('/register', async (req, res) => {
 
         if (fetchError) throw fetchError;
 
-        // Check if any incoming player ID/Name is already registered in another team for this sport
         if (existingRegs && existingRegs.length > 0) {
             for (let member of membersArray) {
                 const memberId = (member.student_id || '').trim();
@@ -97,24 +96,17 @@ app.post('/register', async (req, res) => {
                 for (let reg of existingRegs) {
                     const storedParticipants = (reg.participants || '').toLowerCase();
                     
-                    // Match by Student ID if present, or by Name if ID is missing
                     if (memberId && storedParticipants.includes(memberId.toLowerCase())) {
                         return res.status(400).json({ 
                             success: false, 
                             error: `Registration Error: Student ID '${memberId}' (${member.name}) is already registered in another team for '${sportName}'. A player cannot play in two different teams.` 
                         });
                     }
-                    if (!memberId && memberName && storedParticipants.includes(memberName)) {
-                        return res.status(400).json({ 
-                            success: false, 
-                            error: `Registration Error: Player '${member.name}' is already registered in another team for '${sportName}'.` 
-                        });
-                    }
                 }
             }
         }
 
-        // 5. Format participant names and IDs for Excel mapping
+        // 5. Format participant names and IDs
         let participantValue = 'Unknown Player';
         if (membersArray.length > 0) {
             participantValue = membersArray
@@ -125,7 +117,7 @@ app.post('/register', async (req, res) => {
             participantValue = req.body.participants || 'Unknown Player';
         }
 
-        // 6. Generate Sport Prefix for Serial Reg Code (e.g. BC01, VB02, KB03)
+        // 6. Generate Serial Reg Code (e.g. BC01, VB02)
         let prefix = 'GEN';
         if (lowerSport.includes('box cricket')) prefix = 'BC';
         else if (lowerSport.includes('volleyball')) prefix = 'VB';

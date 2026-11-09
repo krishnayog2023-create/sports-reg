@@ -25,7 +25,7 @@
         <p>Official Unified Registration Portal</p>
 
         <form id="registrationForm">
-            <!-- Declaration & Undertaking Box at the very beginning -->
+            <!-- Declaration & Undertaking Box -->
             <div class="form-group" style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px;">
                 <h3 style="color: #4facfe; margin-top: 0; font-size: 15px; margin-bottom: 10px;">DECLARATION & UNDERTAKING</h3>
                 <div style="font-size: 12px; color: #cbd5e1; max-height: 110px; overflow-y: auto; margin-bottom: 12px; padding-right: 5px; line-height: 1.4;">
@@ -81,8 +81,8 @@
             <h3 style="color: #4facfe; margin-top: 0; margin-bottom: 10px;">Registration Confirmed! 🎉</h3>
             <p style="font-size: 14px; color: #aaa; margin-bottom: 15px;">Scan this QR code to join the official WhatsApp group:</p>
             <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block; margin-bottom: 15px;">
-                <!-- Put your WhatsApp QR image filename or base64 here -->
-                <img src="whatsapp-qr.jpg" alt="WhatsApp Group QR" style="width: 200px; height: 200px; display: block;" />
+                <!-- Make sure your QR image file name matches this (e.g. IMG_0388.jpg) -->
+                <img src="IMG_0388.jpg" alt="WhatsApp Group QR" style="width: 200px; height: 200px; display: block;" />
             </div>
             <div id="modalRegCode" style="font-size: 15px; font-weight: bold; color: #28a745; margin-bottom: 20px;"></div>
             <button type="button" class="btn" onclick="closeQrModal()">Done / Finish</button>
@@ -228,7 +228,6 @@
         document.getElementById('registrationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            // Ensure declaration checkbox is checked
             const declCheck = document.getElementById('declaration_check');
             if (!declCheck.checked) {
                 alert('Please accept the Declaration & Undertaking to proceed.');
@@ -274,7 +273,6 @@
                 const result = await response.json();
                 if (response.ok && result.success) {
                     msgDiv.textContent = '';
-                    // Show QR Code Popup Modal
                     document.getElementById('modalRegCode').textContent = `Assigned Serial Code: ${result.reg_code}`;
                     document.getElementById('qrModal').style.display = 'flex';
                 } else {
